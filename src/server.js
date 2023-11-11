@@ -3,12 +3,12 @@ const AppError = require('./utils/AppError')
 
 const express = require('express')
 const app = express()
+app.use(express.json())
 
 
-const routes = require('./routes/index.js')
+const routes = require('./routes/index')
 app.use(routes)
 
-app.use(express.json())
 
 app.use((error, req, res, next) => {
 
@@ -19,7 +19,9 @@ app.use((error, req, res, next) => {
         })
     }
 
-    return response.status(500).json({
+    console.log(error)
+
+    return res.status(500).json({
         status: "error",
         message: "Erro interno do servidor"
     })
