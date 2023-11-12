@@ -49,49 +49,58 @@ class UsersController {
     const { name, email, password, old_password } = req.body;
 
     const selectedUser = await knex("users").where({ user_id }).first();
-    const userAlredyExists = await knex("users").where({ email }).first();
 
+    await checkForUserErrors(selectedUser, password, old_password, email);
 
-    checkForUserExistenceErrors(selectedUser, userAlredyExists)
+    if (password && old_password) {
+      const checkOldPassword = await compare(
+        old_password,
+        selectedUser.password
+      );
+      if (!checkOldPassword) {
+        throw new AppError("A senha antiga não confere");
+      }
 
-    //checkForUserDataErrors(password, old_password)
-
-    if(password && !old_password){
-        throw new AppError("Você precisa informar a senha antiga")
+      selectedUser.password = await hash(password, 8);
     }
 
-    if(password && old_password){
-        const checkOldPassword = await compare(old_password, selectedUser.password)
-        if(!checkOldPassword){
-            throw new AppError("A senha antiga não confere")
-        }
-
-        selectedUser.password = await hash(password, 8)
-    }
-
-    await knex('users').update({
+    await knex("users")
+      .update({
         name,
         email,
-        updated_at: knex.fn.now()
-    }).where({user_id})
+        password: selectedUser.password,
+        updated_at: knex.fn.now(),
+      })
+      .where({ user_id });
+
+    res.json();
+  }
+
+  async delete(req, res){
+    const {user_id} = req.params
+
+    await knex('users').where({user_id}).delete()
 
     res.json()
-    
-    
   }
 }
 
 const selectUser = ["user_id", "name", "email", "avatar", "created_at"];
 
-function checkForUserExistenceErrors(selectedUser, userAlredyExists){
-    if (!selectedUser) throw new AppError("Usuário não encontrado");
+async function checkForUserErrors(selectedUser, password, old_password, email) {
+  const userAlredyExists = await knex("users").where({ email }).first();
 
-    if (userAlredyExists && userAlredyExists.user_id !== selectedUser.user_id) {
-        throw new AppError(
-          "Esse email já está em uso por outro usuário e não pode ser utilizado."
-        );
-    }
-    
+  if (!selectedUser) throw new AppError("Usuário não encontrado");
+
+  if (userAlredyExists && userAlredyExists.user_id !== selectedUser.user_id) {
+    throw new AppError(
+      "Esse email já está em uso por outro usuário e não pode ser utilizado."
+    );
+  }
+
+  if (password && !old_password) {
+    throw new AppError("Você precisa informar a senha antiga");
+  }
 }
 
 module.exports = UsersController;
