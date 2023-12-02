@@ -18,7 +18,7 @@ class UsersController {
   async create(req, res) {
     const { name, email, password } = req.body;
 
-    await isEmailOnDB(email)
+    await isEmailOnDB(email);
 
     const encryptedPassword = await hash(password, 8);
 
@@ -43,17 +43,21 @@ class UsersController {
   }
 
   async update(req, res) {
-    const { user_id } = req.params;
+    const user_id = req.user.id;
     const { name, email, old_password } = req.body;
-    let {password} = req.body
+    let { password } = req.body;
 
     const selectedUser = await knex("users").where({ user_id }).first();
 
     await checkForUserErrors(selectedUser, email);
-    if(password){
-      password = await passwordValidation(password, old_password, selectedUser.password)
+    if (password) {
+      password = await passwordValidation(
+        password,
+        old_password,
+        selectedUser.password
+      );
     }
-    
+
     await knex("users")
       .update({
         name,
@@ -66,20 +70,20 @@ class UsersController {
     res.json();
   }
 
-  async delete(req, res){
-    const {user_id} = req.params
+  async delete(req, res) {
+    const user_id = req.user.id;
 
-    await knex('users').where({user_id}).delete()
+    await knex("users").where({ user_id }).delete();
 
-    res.json()
+    res.json();
   }
 }
 
 const selectUser = ["user_id", "name", "email", "avatar", "created_at"];
-const emailExistsMassage = "Esse email já está em uso por outro usuário e não pode ser utilizado."
+const emailExistsMassage =
+  "Esse email já está em uso por outro usuário e não pode ser utilizado.";
 
 async function checkForUserErrors(selectedUser, email) {
-
   if (!selectedUser) throw new AppError("Usuário não encontrado");
 
   const userAlredyExists = await knex("users").where({ email }).first();
@@ -87,35 +91,29 @@ async function checkForUserErrors(selectedUser, email) {
   if (userAlredyExists && userAlredyExists.user_id !== selectedUser.user_id) {
     throw new AppError(emailExistsMassage);
   }
-  
 }
 
-async function isEmailOnDB(email){
+async function isEmailOnDB(email) {
   const userExists = await knex("users").where({ email }).first();
 
   if (userExists) throw new AppError(emailExistsMassage);
 
-  return userExists
+  return userExists;
 }
 
-async function passwordValidation(password, old_password, userPassword){
+async function passwordValidation(password, old_password, userPassword) {
   if (password && !old_password) {
     throw new AppError("Você precisa informar a senha antiga");
   }
 
   if (password && old_password) {
-    const checkOldPassword = await compare(
-      old_password,
-      userPassword
-    );
+    const checkOldPassword = await compare(old_password, userPassword);
     if (!checkOldPassword) {
       throw new AppError("A senha antiga não confere");
     }
 
     return await hash(password, 8);
   }
-
-
 }
 
 module.exports = UsersController;
