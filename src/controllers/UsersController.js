@@ -50,12 +50,16 @@ class UsersController {
     const selectedUser = await knex("users").where({ user_id }).first();
 
     await checkForUserErrors(selectedUser, email);
-    if (password) {
+    console.log(password, old_password);
+
+    if (password !== "") {
       password = await passwordValidation(
         password,
         old_password,
         selectedUser.password
       );
+    } else {
+      password = selectedUser.password;
     }
 
     await knex("users")
@@ -114,6 +118,7 @@ async function passwordValidation(password, old_password, userPassword) {
 
     return await hash(password, 8);
   }
+  return userPassword;
 }
 
 module.exports = UsersController;
