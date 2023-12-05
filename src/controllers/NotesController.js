@@ -95,9 +95,24 @@ class NotesController {
       .whereLike("title", `%${title}%`)
       .andWhereLike("description", `%${description}%`)
       .andWhereLike("rating", `%${rating}%`)
-      .orderBy("title");
+      .orderBy("created_at", "desc");
 
-    res.json(notes);
+    // Extrai os note_ids das notas
+    const noteIds = notes.map((note) => note.note_id);
+
+    // Recupera as tags associadas aos note_ids
+    const tags = await knex("tags").whereIn("note_id", noteIds);
+
+    // Organiza os dados da maneira desejada
+    const notesWithTags = notes.map((note) => {
+      const noteTags = tags.filter((tag) => tag.note_id === note.note_id);
+      return {
+        ...note,
+        tags: noteTags,
+      };
+    });
+
+    res.json(notesWithTags);
   }
 }
 
